@@ -13,6 +13,80 @@ namespace CHAROLIS
         }
     }
 
+    public interface IRepository<T> where T : BaseEntity
+    {
+        void Create(T item);
+        T Read(int id);
+        IEnumerable<T> ReadAll();
+        void Update(T item);
+        void Delete(int id);
+        IEnumerable<T> GetAllSortedById();
+    }
+
+    public class Repository<T> : IRepository<T> where T : BaseEntity
+    {
+        protected List<T> items = new List<T>();
+
+        public virtual void Create(T item)
+        {
+            if (items.Any(x => x.Id == item.Id))
+            {
+                throw new ArgumentException($"Item with Id {item.Id} already exists.");
+            }
+            items.Add(item);
+        }
+
+        public virtual T Read(int id)
+        {
+            return items.FirstOrDefault(x => x.Id == id);
+        }
+
+        public virtual IEnumerable<T> ReadAll()
+        {
+            return items;
+        }
+
+        public virtual void Update(T item)
+        {
+            var index = items.FindIndex(x => x.Id == item.Id);
+            if (index < 0)
+            {
+                throw new ArgumentException($"Item with Id {item.Id} not found.");
+            }
+            items[index] = item;
+        }
+
+        public virtual void Delete(int id)
+        {
+            var item = Read(id);
+            if (item != null)
+            {
+                items.Remove(item);
+            }
+        }
+
+        public virtual IEnumerable<T> GetAllSortedById()
+        {
+            return items.OrderBy(x => x.Id);
+        }
+    }
+
+    public class UserRepository : Repository<User>
+    {
+        public IEnumerable<User> GetUsersByEmail(string email)
+        {
+            return items.Where(u => u.Email.Equals(email, StringComparison.OrdinalIgnoreCase));
+        }
+    }
+
+    public class ProductRepository : Repository<Product>
+    {
+        public IEnumerable<Product> GetAvailableProducts()
+        {
+            return items.Where(p => p.IsAvailable);
+        }
+    }
+
     public abstract class User : BaseEntity
     {
         public string Name { get; set; }
@@ -29,9 +103,9 @@ namespace CHAROLIS
             Address = address;
         }
 
-        public virtual void desc()
+        public virtual void Desc()
         {
-            Console.WriteLine($"name: {Name}, email: {Email}, phone: {Phone}, address: {Address}");
+            Console.WriteLine($"Name: {Name}, Email: {Email}, Phone: {Phone}, Address: {Address}");
         }
     }
 
@@ -40,11 +114,10 @@ namespace CHAROLIS
         public Administrator(int id, string name, string email, string phone, string address)
             : base(id, name, email, phone, address) { }
 
-        public override void desc()
+        public override void Desc()
         {
-            Console.WriteLine($"name: {Name}, email: {Email}, phone: {Phone}, address: {Address}");
-            Console.WriteLine($"{Name} is controll shop");
-
+            base.Desc();
+            Console.WriteLine($"{Name} is controlling the shop.");
         }
     }
 
@@ -53,10 +126,10 @@ namespace CHAROLIS
         public RegisteredUser(int id, string name, string email, string phone, string address)
             : base(id, name, email, phone, address) { }
 
-        public override void desc()
+        public override void Desc()
         {
-            Console.WriteLine($"name: {Name}, email: {Email}, phone: {Phone}, address: {Address}");
-            Console.WriteLine($"welcome back, {Name}");
+            base.Desc();
+            Console.WriteLine($"Welcome back, {Name}!");
         }
     }
 
@@ -65,10 +138,10 @@ namespace CHAROLIS
         public Guest(int id, string name)
             : base(id, name, "N/A", "N/A", "N/A") { }
 
-        public override void desc()
+        public override void Desc()
         {
-            Console.WriteLine($"name: {Name}, email: {Email}, phone: {Phone}, address: {Address}");
-            Console.WriteLine($"welcome, {Name}. Register to gain full access.");
+            base.Desc();
+            Console.WriteLine($"Welcome, {Name}. Register to gain full access.");
         }
     }
 
@@ -77,7 +150,7 @@ namespace CHAROLIS
         public string Name { get; set; }
         public string Description { get; set; }
         public double Price { get; set; }
-        public bool IsAvailable { get; set; } // Чи є товар в наявності
+        public bool IsAvailable { get; set; }
 
         public Product(int id, string name, string description, double price, bool isAvailable)
             : base(id)
@@ -90,126 +163,83 @@ namespace CHAROLIS
 
         public void DisplayInfo()
         {
-            Console.WriteLine($"name: {Name}\ndesc: {Description}\ntext: {Price:C}\nprice: {(IsAvailable ? "availible" : "not availible")}");
+            Console.WriteLine($"Name: {Name}\nDescription: {Description}\nPrice: {Price:C}\nAvailability: {(IsAvailable ? "Available" : "Not Available")}");
         }
 
-        public bool CheckAvailability()
-        {
-            return IsAvailable;
-        }
+        public bool CheckAvailability() => IsAvailable;
     }
-
-    public class OrderItem
-    {
-        public Product Product { get; set; }
-        public int Quantity { get; set; }
-
-        public OrderItem(Product product, int quantity)
-        {
-            Product = product;
-            Quantity = quantity;
-        }
-    }
-
-    public interface INotifiable
-    {
-        void SendNotification(string message);
-    }
-
-
-    public abstract class Order : BaseEntity, INotifiable
-    {
-        public List<OrderItem> Items { get; set; }
-        public string Status { get; protected set; }
-
-        public Order(int id) : base(id)
-        {
-            Items = new List<OrderItem>();
-            Status = "new";
-        }
-
-        public double TotalPrice => Items.Sum(item => item.Product.Price * item.Quantity);
-        public int TotalQuantity => Items.Sum(item => item.Quantity);
-
-        public void AddItem(Product product, int quantity)
-        {
-            if (!product.CheckAvailability())
-            {
-                Console.WriteLine($"product \"{product.Name}\" is not availible.");
-                return;
-            }
-            Items.Add(new OrderItem(product, quantity));
-        }
-
-        public virtual void DisplayOrder()
-        {
-            Console.WriteLine("request details:");
-            foreach (var item in Items)
-            {
-                Console.WriteLine($"product: {item.Product.Name}, amount: {item.Quantity}, sum: {(item.Product.Price * item.Quantity):C}");
-            }
-            Console.WriteLine($"general amount: {TotalQuantity}");
-            Console.WriteLine($"general price: {TotalPrice:C}");
-            Console.WriteLine($"starus of request: {Status}");
-        }
-
-        public void UpdateStatus(string newStatus)
-        {
-            Status = newStatus;
-            SendNotification($"status of your request has been updated: {Status}");
-        }
-
-        public void SendNotification(string message)
-        {
-            Console.WriteLine($"[email message]: {message}");
-        }
-
-    }
-
-    public class StandardOrder : Order
-    {
-        public StandardOrder(int id) : base(id) { }
-
-    }
-
 
     public class Program
     {
         public static void Main(string[] args)
         {
-            Product p1 = new Product(1, "magic wand",
-                "wand, full of magic", 70.00, true);
-            Product p2 = new Product(2, "magic scent",
-                "magic desc", 49.99, false);
+            // Створення репозиторіїв
+            var userRepo = new UserRepository();
+            var productRepo = new ProductRepository();
 
-            p1.DisplayInfo();
-            Console.WriteLine();
+            // Додавання користувачів
+            userRepo.Create(new Administrator(1, "Laura", "alice@charolis.com", "123456789", "St. Magic, 1"));
+            userRepo.Create(new RegisteredUser(2, "Tony", "bob@charolis.com", "987654321", "Sq. Some, 2"));
+            userRepo.Create(new Guest(3, "Guest"));
 
-            Administrator admin = new Administrator(1, "Laura", "alice@charolis.com", "123456789", "st. magic, 1");
-            RegisteredUser regUser = new RegisteredUser(2, "Tony", "bob@charolis.com", "987654321", "sq. some, 2");
-            Guest guest = new Guest(3, "guest");
-
-            User[] users = { admin, regUser, guest };
-            foreach (var user in users)
+            // Відображення всіх користувачів (відсортовано за Id)
+            Console.WriteLine("All Users:");
+            foreach (var user in userRepo.GetAllSortedById())
             {
-                user.desc();
+                user.Desc();
                 Console.WriteLine();
             }
 
-            StandardOrder order = new StandardOrder(101);
-            order.AddItem(p1, 2);
-            order.AddItem(p2, 1);
-
-            order.DisplayOrder();
+            // Знайти конкретного користувача за Id
+            var specificUser = userRepo.Read(2);
+            Console.WriteLine("User with Id 2:");
+            specificUser?.Desc();
             Console.WriteLine();
 
-            order.DisplayOrder();
-            Console.WriteLine();
+            // Додавання товарів
+            productRepo.Create(new Product(1, "Magic Wand", "Wand full of magic", 70.00, true));
+            productRepo.Create(new Product(2, "Magic Scent", "Magical aroma", 49.99, false));
 
-            StandardOrder order2 = new StandardOrder(102);
-            order2.AddItem(p1, 1);
-            order2.DisplayOrder();
-            Console.WriteLine();
+            // Відображення всіх товарів
+            Console.WriteLine("All Products:");
+            foreach (var product in productRepo.GetAllSortedById())
+            {
+                product.DisplayInfo();
+                Console.WriteLine();
+            }
+
+            // Фільтрація товарів: тільки доступні
+            Console.WriteLine("Available Products:");
+            foreach (var product in productRepo.GetAvailableProducts())
+            {
+                product.DisplayInfo();
+                Console.WriteLine();
+            }
+
+            // Оновлення товару
+            var productToUpdate = productRepo.Read(2);
+            if (productToUpdate != null)
+            {
+                // Наприклад, змінюємо доступність
+                productToUpdate.IsAvailable = true;
+                productRepo.Update(productToUpdate);
+            }
+
+            Console.WriteLine("After updating product availability:");
+            foreach (var product in productRepo.GetAllSortedById())
+            {
+                product.DisplayInfo();
+                Console.WriteLine();
+            }
+
+            // Видалення користувача
+            userRepo.Delete(3);
+            Console.WriteLine("After deleting user with Id 3:");
+            foreach (var user in userRepo.GetAllSortedById())
+            {
+                user.Desc();
+                Console.WriteLine();
+            }
         }
     }
 }

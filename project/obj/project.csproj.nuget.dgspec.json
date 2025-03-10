@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "E:\\op\\project\\project\\project.csproj": {}
+    "E:\\op\\OP-ch\\project\\project.csproj": {}
   },
   "projects": {
-    "E:\\op\\project\\project\\project.csproj": {
+    "E:\\op\\OP-ch\\project\\project.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "E:\\op\\project\\project\\project.csproj",
+        "projectUniqueName": "E:\\op\\OP-ch\\project\\project.csproj",
         "projectName": "project",
-        "projectPath": "E:\\op\\project\\project\\project.csproj",
+        "projectPath": "E:\\op\\OP-ch\\project\\project.csproj",
         "packagesPath": "C:\\Users\\kab1w\\.nuget\\packages\\",
-        "outputPath": "E:\\op\\project\\project\\obj\\",
+        "outputPath": "E:\\op\\OP-ch\\project\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "D:\\apps\\visualStudio\\comps\\NuGetPackages"
